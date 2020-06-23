@@ -1,7 +1,8 @@
 #!/bin/bash
 
-source /home/mbykowsx/.bashrc_functions
-start_logging
+if source /home/mbykowsx/.bashrc_functionss 1>/dev/null 2>&1; then
+	start_logging
+fi
 
 : << 'COMMENT'
 Relate this to "CCN-512 Register Base Addresses" in "Intel® Axxia™ Lionfish Communication Processor CPU Complex"
@@ -40,7 +41,7 @@ dir (direction) = 1 from the perspecive of XP
 cmp_l (watchpoint comparison low bits) = 0
 
 cmp_h (watchpoint comparison high bits) = 0xe << 18
-	val/mask[21:18] QOS
+	val/mask[21:18] QoS
 
 mask_l (comparator mask) = 0xffffffffffffffff
 	bit 0 corresnponds into matching, bit 1 into not matching
@@ -62,8 +63,9 @@ echo 0xFFFFFFFFFFC3FFFF > /sys/devices/ccn/cmp_mask/0h
 cpunu=`cat /sys/devices/ccn/cpumask`
 echo "CCN perf runs on CPU${cpunu}"
 
-qos=$((0xe<<18))
-echo "Collecting flits with QoS=${qos}"
+qos=0xe
+qos_field=$((qos<<18))
+echo "Collecting flits with qos=${qos}"
 
 arm_cluster0()
 {
@@ -72,15 +74,16 @@ arm_cluster0()
 	# collected.
 	taskset -c 0 ./mem_load -N 100000 &
 	xp_id=16
+	dev_port=0
 	perf stat -a -e \
-	ccn/xp_watchpoint,xp=${xp_id},vc=0,port=0,dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=1,port=0,dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=3,port=0,dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=1,port=0,dir=1,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=2,port=0,dir=1,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=3,port=0,dir=1,cmp_l=0,cmp_h=${qos},mask=0/ \
+	ccn/xp_watchpoint,xp=${xp_id},vc=0,port=0,dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=1,port=0,dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=3,port=0,dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=1,port=0,dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=2,port=0,dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=3,port=0,dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/ \
 sleep 5
-	ps -e -o pid,psr,comm | grep "bw_mem\|mem_load"
+	ps -e -o pid,psr,comm | grep -q "bw_mem\|mem_load"
 	killall mem_load
 }
 
@@ -92,17 +95,17 @@ ceva_cluster0()
 	xp_id=16
 	dev_port=1
 	perf stat -a -e \
-	ccn/xp_watchpoint,xp=${xp_id},vc=0,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=1,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=3,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=1,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=2,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos},mask=0/,\
-ccn/xp_watchpoint,xp=${xp_id},vc=3,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos},mask=0/ \
+	ccn/xp_watchpoint,xp=${xp_id},vc=0,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=1,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=3,port=${dev_port},dir=0,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=1,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=2,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/,\
+ccn/xp_watchpoint,xp=${xp_id},vc=3,port=${dev_port},dir=1,cmp_l=0,cmp_h=${qos_field},mask=0/ \
 ${duration}
 }
 
-arm_cluster0 
+arm_cluster0
 
-echo "Measured flits for:"
-echo " xp=${xp_id}" device port XP=${xp_id}"
-echo " channels in the sequence present: txreq, txres, txdata, rxres, rxsnp, rxdata"
+echo "Collection for flits with qos=${qos} for:"
+echo " RN-F identifed with: xp=${xp_id} device port XP=${dev_port}"
+echo " Channels (in the sequence present): txreq, txres, txdata, rxres, rxsnp, rxdata"
