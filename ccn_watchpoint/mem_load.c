@@ -37,7 +37,7 @@ main(int argc, char **argv)
 	printf("mb: repetitions %lu\n",repetitions);
 	while(repetitions--) {
 		/*printf("mb: reps %lu\n", repetitions);*/	
-		mem_load((void*) from, SIZE);
+		mem_load((void*)from, SIZE);
 	}
 	printf("mb: mem_load done\n");
 	
